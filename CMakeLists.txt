@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(MatchingEngine)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include_directories(include)
+
+file(GLOB SOURCES "src/*.cpp")
+
+add_executable(matching_engine ${SOURCES})
+
+target_compile_options(matching_engine PRIVATE
+    -g
+    -O0
+    -Wall
+    -Wextra
+    -fno-omit-frame-pointer
+    -fsanitize=address
+    
+    # -O3
+    # -march=native
+    # -flto
+)
+
+target_link_options(matching_engine PRIVATE
+    -fsanitize=address
+)
