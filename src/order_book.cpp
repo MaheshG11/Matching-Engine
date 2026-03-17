@@ -10,12 +10,9 @@ OrderBook::OrderBook() : event_handler_(), memory_pool_(MAX_ORDERS), best_bid_pr
 
 OrderBook::~OrderBook(){
     event_handler_.StopEventLoop();
-    // for(auto &order_node : orders_){
-    //     if(order_node) delete order_node;
-    // }
 }
 
-void OrderBook::ProcessOrder(Order order){
+void OrderBook::ProcessOrder(Order &order){
 
     switch (order.event_type) {
         case 'N': // New Order
@@ -30,7 +27,7 @@ void OrderBook::ProcessOrder(Order order){
     }
 }
 
-void OrderBook::addOrder(Order order){
+void OrderBook::addOrder(Order &order){
     if (order.side == 'B') {
         addBuyOrder(order);
     } else {
@@ -38,7 +35,7 @@ void OrderBook::addOrder(Order order){
     }
 }
 
-void OrderBook::addBuyOrder(Order order){
+void OrderBook::addBuyOrder(Order &order){
     int initial_quantity = order.quantity;
     while(order.price >= best_ask_price_ && order.quantity > ZERO){
         auto sell_order_node = sell_price_levels_[best_ask_price_].head;
@@ -67,7 +64,7 @@ void OrderBook::addBuyOrder(Order order){
 
 
 }
-void OrderBook::addSellOrder(Order order){
+void OrderBook::addSellOrder(Order &order){
     int initial_quantity = order.quantity;
 
     while(order.price <= best_bid_price_ && order.quantity > ZERO){
@@ -95,7 +92,7 @@ void OrderBook::addSellOrder(Order order){
     }
     sendAddEvent(order, initial_quantity);
 }
-void OrderBook::cancelOrder(Order order){
+void OrderBook::cancelOrder(Order &order){
     auto order_node = orders_[order.order_id];
     if(order_node){    
         auto price_level = order_node->price_level;
@@ -125,7 +122,7 @@ void OrderBook::cancelOrder(Order order){
 
 
 }
-void OrderBook::modifyOrder(Order order){
+void OrderBook::modifyOrder(Order &order){
     cancelOrder(order);
     addOrder(order);
 }
@@ -163,7 +160,7 @@ bool OrderBook::updatePriceLevel(PriceLevel &price_level){
     return false; // Price level still has orders
 }
 
-void OrderBook::sendAddEvent(Order order, int initial_quantity){
+void OrderBook::sendAddEvent(Order &order, int initial_quantity){
     if(initial_quantity != order.quantity){
         Event event{
             .order_id = order.order_id,
@@ -177,7 +174,7 @@ void OrderBook::sendAddEvent(Order order, int initial_quantity){
     }
 }
 
-void OrderBook::sendExecEvent(Order order, int exec_quantity, int exec_price, char status){
+void OrderBook::sendExecEvent(Order &order, int exec_quantity, int exec_price, char status){
     Event event{
         .order_id = order.order_id,
         .quantity = exec_quantity,
@@ -189,7 +186,7 @@ void OrderBook::sendExecEvent(Order order, int exec_quantity, int exec_price, ch
     event_handler_.HandleEvent(event);
 }
 
-void OrderBook::sendCancelEvent(Order order){
+void OrderBook::sendCancelEvent(Order &order){
     Event event{
         .order_id = order.order_id,
         .quantity = order.quantity,

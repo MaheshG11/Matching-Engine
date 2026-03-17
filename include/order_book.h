@@ -17,20 +17,20 @@ class OrderBook{
     public:
         OrderBook();
         ~OrderBook();
-        void ProcessOrder(Order order);
+        void ProcessOrder(Order &order);
 
     private:
-        void addOrder(Order order);
-        void addBuyOrder(Order order);
-        void addSellOrder(Order order);
-        void cancelOrder(Order order);
-        void modifyOrder(Order order);
+        void addOrder(Order &order);
+        void addBuyOrder(Order &order);
+        void addSellOrder(Order &order);
+        void cancelOrder(Order &order);
+        void modifyOrder(Order &order);
         void updateBestBid();
         void updateBestAsk();
         bool updatePriceLevel(PriceLevel &price_level);
-        void sendAddEvent(Order order, int initial_quantity);
-        void sendExecEvent(Order order, int exec_quantity, int exec_price, char status);
-        void sendCancelEvent(Order order);
+        void sendAddEvent(Order &order, int initial_quantity);
+        void sendExecEvent(Order &order, int exec_quantity, int exec_price, char status);
+        void sendCancelEvent(Order &order);
 
     private:
         EventHandler event_handler_;
