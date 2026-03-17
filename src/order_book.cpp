@@ -1,7 +1,7 @@
 #include "order_book.h"
 #include <iostream>
 using namespace std;
-OrderBook::OrderBook() : event_handler_(), best_bid_price_(ZERO), best_ask_price_(MAX_PRICE_LEVELS) {
+OrderBook::OrderBook() : event_handler_(), memory_pool_(MAX_ORDERS), best_bid_price_(ZERO), best_ask_price_(MAX_PRICE_LEVELS) {
     buy_price_levels_.resize(MAX_PRICE_LEVELS+ONE);
     sell_price_levels_.resize(MAX_PRICE_LEVELS+ONE);
     orders_.resize(MAX_ORDERS);
@@ -10,13 +10,12 @@ OrderBook::OrderBook() : event_handler_(), best_bid_price_(ZERO), best_ask_price
 
 OrderBook::~OrderBook(){
     event_handler_.StopEventLoop();
-    for(auto &order_node : orders_){
-        if(order_node) delete order_node;
-    }
+    // for(auto &order_node : orders_){
+    //     if(order_node) delete order_node;
+    // }
 }
 
 void OrderBook::ProcessOrder(Order order){
-    // std::cout << "order details: " << "order_id: " << order.order_id << " side: " << order.side << " price: " << order.price << " quantity: " << order.quantity << " event_type: " << order.event_type << std::endl;
 
     switch (order.event_type) {
         case 'N': // New Order
@@ -53,7 +52,12 @@ void OrderBook::addBuyOrder(Order order){
         }
     }
     if(order.quantity!= ZERO){
-        auto buy_node = new OrderNode{order.order_id,order.quantity,nullptr,nullptr,&buy_price_levels_[order.price]};
+        auto buy_node = memory_pool_.Allocate();
+        buy_node->order_id = order.order_id;
+        buy_node->quantity = order.quantity;
+        buy_node-> next = nullptr;
+        buy_node->prev = nullptr;
+        buy_node->price_level=&buy_price_levels_[order.price];
         orders_[order.order_id] = buy_node;
         buy_price_levels_[order.price].AddOrder(buy_node);
         if(order.price > best_bid_price_)best_bid_price_=order.price;
@@ -79,7 +83,12 @@ void OrderBook::addSellOrder(Order order){
         }
     }
     if(order.quantity){
-        auto sell_node = new OrderNode{order.order_id,order.quantity,nullptr,nullptr,&sell_price_levels_[order.price]};
+        auto sell_node = memory_pool_.Allocate();
+        sell_node->order_id = order.order_id;
+        sell_node->quantity = order.quantity;
+        sell_node-> next = nullptr;
+        sell_node->prev = nullptr;
+        sell_node->price_level=&sell_price_levels_[order.price];
         orders_[order.order_id] = sell_node;
         sell_price_levels_[order.price].AddOrder(sell_node);
         if(order.price < best_ask_price_)best_ask_price_=order.price;
@@ -111,7 +120,7 @@ void OrderBook::cancelOrder(Order order){
             }
         }
         sendCancelEvent(order);
-        delete order_node;
+        memory_pool_.Deallocate(order_node);
     }
 
 
@@ -142,10 +151,10 @@ bool OrderBook::updatePriceLevel(PriceLevel &price_level){
         orders_[price_level.head->order_id] = nullptr; // Update reference to the new head order node
         if(price_level.head->next != nullptr){
             price_level.head = price_level.head->next;
-            delete price_level.head->prev; // Free the memory of the old head order node
+            memory_pool_.Deallocate(price_level.head->prev);  // Free the memory of the old head order node
             price_level.head->prev = nullptr;
         } else {
-            delete price_level.head; // Free the memory of the old head order node
+            memory_pool_.Deallocate(price_level.head); // Free the memory of the old head order node
             price_level.head = nullptr;
             price_level.tail = nullptr;
             return true; // Price level is now empty

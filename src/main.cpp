@@ -81,6 +81,7 @@ int main() {
     cout << "P90 latency: " << times_in_ns[times_in_ns.size() * 90 / 100] << " ns\n";
     cout << "P99 latency: " << times_in_ns[times_in_ns.size() * 99 / 100] << " ns\n";
     cout << "P99.9 latency: " << times_in_ns[times_in_ns.size() * 999 / 1000] << " ns\n";
+    cout << "Worst-case latency: " << times_in_ns.back() << " ns\n";
     cout<<"Program finished\n";
     return 0;
 }

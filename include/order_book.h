@@ -5,6 +5,7 @@
 #include "event_handler.h"
 #include "price_level.h"
 #include "order_node.h"
+#include "memory_pool.h"
 
 inline constexpr int MAX_PRICE_LEVELS = 100'000; // Assuming price levels range from 0 to 99999
 inline constexpr int MAX_ORDERS = 5'000'000; // Assuming a maximum of 1 million orders in the order book
@@ -36,6 +37,7 @@ class OrderBook{
         std::vector<PriceLevel> buy_price_levels_;
         std::vector<PriceLevel> sell_price_levels_;
         std::vector<OrderNode*> orders_; // to keep track of all orders in the order book
+        MemoryPool<OrderNode> memory_pool_;
         int best_bid_price_;
         int best_ask_price_;
 
