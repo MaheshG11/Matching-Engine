@@ -1,30 +1,35 @@
 #include "event_handler.h"
 
 void EventHandler::HandleEvent(Event event){
-    {
-        std::lock_guard<std::mutex> lock(queue_mutex_);
-        event_queue_.push(event);
+    auto write_index = write_head.load(std::memory_order_relaxed);
+    auto read_index = read_head.load(std::memory_order_acquire);
+
+    while(write_index - read_index >= MAX_BUFFER_SIZE){
+        // Buffer is full, wait for the event loop to process some events
+        std::this_thread::yield();
+        read_index = read_head.load(std::memory_order_acquire);
     }
-    event_cv_.notify_one();
+
+    event_buffer_[write_index & (MAX_BUFFER_SIZE - 1)] = event;
+    write_head.store(write_index + 1, std::memory_order_release);
 }
 
 void EventHandler::RunEventLoop(){
-    is_event_loop_running_ = true;
+    StopEventLoop(); // Ensure any existing event loop is stopped before starting a new one
+    is_event_loop_running_.store(true, std::memory_order_release);
     std::thread event_loop_thread([this](){
-        while(is_event_loop_running_){
-            std::queue<Event> events_to_process;
-            {
-                std::unique_lock<std::mutex> lock(queue_mutex_);
-                event_cv_.wait(lock, [this](){ return !event_queue_.empty() || !is_event_loop_running_; });
-                swap(events_to_process, event_queue_);
-            }
-            while(events_to_process.size()){
-                Event event = events_to_process.front();
-                events_to_process.pop();
-                std::cout << "Event: order_id: " << event.order_id << " side: " << event.side << " price: " << event.price << " quantity: " << event.quantity << " event_type: " << event.event_type << " status: " << event.status <<'\n';
-            }
-            std::cout<<std::endl;
+        while(is_event_loop_running_.load(std::memory_order_acquire)){
+            auto read_index = read_head.load(std::memory_order_relaxed);
 
+            if(read_index == write_head.load(std::memory_order_acquire)){
+                // Empty Buffer
+                std::this_thread::yield();
+                continue;
+            }
+            // process event
+            Event event = event_buffer_[read_index & (MAX_BUFFER_SIZE - 1)];
+            read_head.store(read_index + 1, std::memory_order_release);
+            // std::cout << "Event: order_id: " << event.order_id << " side: " << event.side << " price: " << event.price << " quantity: " << event.quantity << " event_type: " << event.event_type << " status: " << event.status <<'\n';
             // Process the event (for now we just print it)
         }
     });
@@ -33,10 +38,8 @@ void EventHandler::RunEventLoop(){
 } 
 
 void EventHandler::StopEventLoop(){
-    is_event_loop_running_ = false;
-    event_cv_.notify_all();
+    is_event_loop_running_.store(false, std::memory_order_release);
     if(event_loop_thread_.joinable()){
         event_loop_thread_.join();
     }
 }
-
