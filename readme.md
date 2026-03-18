@@ -67,7 +67,7 @@ Worst-case latency: 25894 ns
 Initial implementation (with I/O): ~135 ms worst-case  
 After mmap + binary logging: ~26 µs worst-case  
 
-> Eliminated syscall overhead and scheduler-induced latency spikes.
+> Eliminated syscall overhead 
 
 ---
 
