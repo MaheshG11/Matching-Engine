@@ -1,5 +1,9 @@
 #include "event_handler.h"
 #include <cassert>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <immintrin.h>
 
 EventHandler::EventHandler() : m_buffer(nullptr) {
     fd = open("events.log", O_RDWR | O_CREAT | O_TRUNC, 0666);
@@ -32,6 +36,7 @@ void EventHandler::HandleEvent(Event &event){
     auto read_index = read_head_.load(std::memory_order_acquire);
 
     while(write_index - read_index >= MAX_BUFFER_SIZE){
+        _mm_pause(); // Buffer is full, wait for the event loop to consume events
         read_index = read_head_.load(std::memory_order_acquire);
     }
 
@@ -49,6 +54,7 @@ void EventHandler::RunEventLoop(){
 
             if(read_index == write_head_.load(std::memory_order_acquire)){
                 // Empty Buffer
+                _mm_pause();
                 continue;
             }
             // process event

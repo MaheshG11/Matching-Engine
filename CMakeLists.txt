@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(MatchingEngine)
-set(CMAKE_BUILD_TYPE Debug) # Release
+set(CMAKE_BUILD_TYPE Release) # Debug
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,7 +23,8 @@ target_compile_options(matching_engine PRIVATE
     -O3
     -march=native
     -flto
-    # -O3 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls
+    # -O3 -g -fno-omit-frame-pointer -
+    # fno-optimize-sibling-calls
 )
 
 add_executable(event_reader src/event_reader.cc)
