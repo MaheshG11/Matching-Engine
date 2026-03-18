@@ -6,6 +6,12 @@ OrderBook::OrderBook() : event_handler_(), memory_pool_(MAX_ORDERS), best_bid_pr
     sell_price_levels_.resize(MAX_PRICE_LEVELS+ONE);
     orders_.resize(MAX_ORDERS);
     event_handler_.RunEventLoop();
+    for(auto &level: buy_price_levels_){
+        level.side = 'B';
+    }
+    for(auto &level: sell_price_levels_){
+        level.side = 'S';   
+    }
 }
 
 OrderBook::~OrderBook(){
@@ -110,7 +116,7 @@ void OrderBook::cancelOrder(Order &order){
         }
         orders_[order.order_id] = nullptr;
         if(updatePriceLevel(*(order_node->price_level))){
-            if(order_node->price_level == &buy_price_levels_[order_node->price_level - &buy_price_levels_[ZERO]]){
+            if(order_node->price_level->side == 'B'){
                 updateBestBid();
             } else {
                 updateBestAsk();

@@ -22,6 +22,7 @@ class PriceLevel {
 
         OrderNode* head;
         OrderNode* tail;
+        char side;
         
 };
 

@@ -1,5 +1,32 @@
 #include "event_handler.h"
 #include <cassert>
+
+EventHandler::EventHandler() : m_buffer(nullptr) {
+    fd = open("events.log", O_RDWR | O_CREAT | O_TRUNC, 0666);
+    assert(fd != -1);
+    int res = ftruncate(fd, FILE_SIZE);
+    m_buffer = static_cast<char*> (mmap(
+        nullptr,
+        FILE_SIZE,
+        PROT_WRITE,
+        MAP_SHARED,
+        fd,
+        0
+    ));
+    assert(m_buffer != MAP_FAILED);
+}
+
+EventHandler::~EventHandler() {
+    Event sentinel{};
+    sentinel.order_id = -1;
+    WriteEventsToFile(sentinel);
+
+    msync(m_buffer, offset, MS_SYNC);
+    munmap(m_buffer, FILE_SIZE);
+    m_buffer = nullptr;
+    close(fd);
+}
+
 void EventHandler::HandleEvent(Event &event){
     auto write_index = write_head_.load(std::memory_order_relaxed);
     auto read_index = read_head_.load(std::memory_order_acquire);
@@ -13,9 +40,7 @@ void EventHandler::HandleEvent(Event &event){
 }
 
 void EventHandler::RunEventLoop(){
-    std::ios::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-    string_buffer_.reserve(STRING_BUFFER_SIZE + STRING_BUFFER_DELTA); // Reserve space for the string buffer to avoid frequent reallocations
+
     StopEventLoop(); // Ensure any existing event loop is stopped before starting a new one
     is_event_loop_running_.store(true, std::memory_order_release);
     std::thread event_loop_thread([this](){
@@ -29,13 +54,7 @@ void EventHandler::RunEventLoop(){
             // process event
             Event& event = event_buffer_[read_index & (MAX_BUFFER_SIZE - 1)];            
             read_head_.store(read_index + 1, std::memory_order_release);
-            string_buffer_.append(std::to_string(event.order_id) + SPACE_CHAR + event.side + SPACE_CHAR + std::to_string(event.price) + SPACE_CHAR + std::to_string(event.quantity) + SPACE_CHAR + event.event_type + SPACE_CHAR + event.status + '\n');
-            
-            if(string_buffer_.size() > STRING_BUFFER_SIZE){
-                size_t val = write(1, string_buffer_.data(), string_buffer_.size());
-                assert(val == string_buffer_.size());
-                string_buffer_.clear();
-            }
+            WriteEventsToFile(event);
         }
     });
     swap(event_loop_thread_, event_loop_thread);
@@ -47,4 +66,10 @@ void EventHandler::StopEventLoop(){
     if(event_loop_thread_.joinable()){
         event_loop_thread_.join();
     }
+}
+
+void EventHandler::WriteEventsToFile(Event& event){
+    assert(offset + sizeof(Event) <= FILE_SIZE);
+    memcpy(m_buffer + offset, &event, sizeof(Event));
+    offset += sizeof(Event);    
 }

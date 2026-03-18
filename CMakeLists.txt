@@ -13,18 +13,21 @@ file(GLOB SOURCES "src/*.cpp")
 add_executable(matching_engine ${SOURCES})
 
 target_compile_options(matching_engine PRIVATE
-    -g
-    -O0
-    -Wall
-    -Wextra
-    -fno-omit-frame-pointer
-    -fsanitize=address
+    # -g
+    # -O0
+    # -Wall
+    # -Wextra
+    # -fno-omit-frame-pointer
+    # -fsanitize=address
     
-    # -O3
-    # -march=native
-    # -flto
+    -O3
+    -march=native
+    -flto
+    # -O3 -g -fno-omit-frame-pointer -fno-optimize-sibling-calls
 )
 
-target_link_options(matching_engine PRIVATE
-    -fsanitize=address
-)
+add_executable(event_reader src/event_reader.cc)
+
+# target_link_options(matching_engine PRIVATE
+#     -fsanitize=address
+# )

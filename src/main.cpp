@@ -28,8 +28,8 @@ vector<Order> WorkloadGenerator(uint64_t num_workload_orders) {
             // NEW ORDER
             o.order_id = next_id++;
             o.side = (r & 1) ? 'B' : 'S';
-            o.price = 1000 + (r % 20);
-            o.quantity = 1 + (r % 100);
+            o.price = 1000 + (r % 200);
+            o.quantity = 1 + (r % 1000);
             o.event_type = 'N';
 
             active_orders.push_back(o.order_id);
@@ -47,7 +47,7 @@ vector<Order> WorkloadGenerator(uint64_t num_workload_orders) {
             // MODIFY
             uint64_t idx = r % active_orders.size();
             o.order_id = active_orders[idx];
-            o.quantity = 1 + (r % 100);
+            o.quantity = 1 + (r % 1000);
             o.event_type = 'M';
         }
 
