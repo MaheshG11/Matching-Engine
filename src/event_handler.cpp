@@ -49,11 +49,14 @@ void EventHandler::RunEventLoop(){
     StopEventLoop(); // Ensure any existing event loop is stopped before starting a new one
     is_event_loop_running_.store(true, std::memory_order_release);
     std::thread event_loop_thread([this](){
-        while(is_event_loop_running_.load(std::memory_order_acquire)){
+        while(true){
             auto read_index = read_head_.load(std::memory_order_relaxed);
 
             if(read_index == write_head_.load(std::memory_order_acquire)){
                 // Empty Buffer
+                if(!is_event_loop_running_.load(std::memory_order_acquire)){
+                    break;
+                }
                 _mm_pause();
                 continue;
             }
