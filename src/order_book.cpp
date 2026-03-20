@@ -49,8 +49,7 @@ void OrderBook::addBuyOrder(Order &order){
         order.quantity-=exec_quantity;
         sell_order_node->quantity-=exec_quantity;
         sendExecEvent(order, exec_quantity, best_ask_price_, order.quantity == ZERO ? 'C' : 'P');
-            
-        if(updatePriceLevel(sell_price_levels_[best_ask_price_])){
+        if(sell_order_node->quantity == ZERO && updatePriceLevel(sell_price_levels_[best_ask_price_])){
             updateBestAsk();
         }
     }
@@ -63,7 +62,7 @@ void OrderBook::addBuyOrder(Order &order){
         buy_node->price_level=&buy_price_levels_[order.price];
         orders_[order.order_id] = buy_node;
         buy_price_levels_[order.price].AddOrder(buy_node);
-        if(order.price > best_bid_price_)best_bid_price_=order.price;
+        best_bid_price_ = order.price > best_bid_price_ ? order.price : best_bid_price_;
 
     } 
     sendAddEvent(order, initial_quantity);
@@ -79,10 +78,8 @@ void OrderBook::addSellOrder(Order &order){
         order.quantity-=exec_quantity;
         buy_order_node->quantity-=exec_quantity;
         sendExecEvent(order, exec_quantity, best_bid_price_, order.quantity == ZERO ? 'C' : 'P');
-        if(buy_order_node->quantity == ZERO){
-            if(updatePriceLevel(buy_price_levels_[best_bid_price_])){
-                updateBestBid();
-            }
+        if(buy_order_node->quantity == ZERO && updatePriceLevel(buy_price_levels_[best_bid_price_])){
+            updateBestBid();
         }
     }
     if(order.quantity){
@@ -94,7 +91,8 @@ void OrderBook::addSellOrder(Order &order){
         sell_node->price_level=&sell_price_levels_[order.price];
         orders_[order.order_id] = sell_node;
         sell_price_levels_[order.price].AddOrder(sell_node);
-        if(order.price < best_ask_price_)best_ask_price_=order.price;
+        best_ask_price_ = order.price < best_ask_price_ ? order.price : best_ask_price_;
+
     }
     sendAddEvent(order, initial_quantity);
 }
@@ -115,13 +113,14 @@ void OrderBook::cancelOrder(Order &order){
             order_node->next->prev=order_node->prev;
         }
         orders_[order.order_id] = nullptr;
-        if(updatePriceLevel(*(order_node->price_level))){
+        if(price_level->head == nullptr){
             if(order_node->price_level->side == 'B'){
                 updateBestBid();
             } else {
                 updateBestAsk();
             }
         }
+
         sendCancelEvent(order);
         memory_pool_.Deallocate(order_node);
     }
@@ -146,23 +145,18 @@ void OrderBook::updateBestAsk(){
 }
 
 bool OrderBook::updatePriceLevel(PriceLevel &price_level){
-    if(price_level.head == nullptr){
-        return true; // Price level is empty
+    orders_[price_level.head->order_id] = nullptr; // Update reference to the new head order node
+    if(price_level.head->next != nullptr){
+        price_level.head = price_level.head->next;
+        memory_pool_.Deallocate(price_level.head->prev);  // Free the memory of the old head order node
+        price_level.head->prev = nullptr;
+    } else {
+        memory_pool_.Deallocate(price_level.head); // Free the memory of the old head order node
+        price_level.head = nullptr;
+        price_level.tail = nullptr;
+        return true; // Price level is now empty
     }
-    if(price_level.head->quantity == ZERO){
-        // Remove the order from the price level
-        orders_[price_level.head->order_id] = nullptr; // Update reference to the new head order node
-        if(price_level.head->next != nullptr){
-            price_level.head = price_level.head->next;
-            memory_pool_.Deallocate(price_level.head->prev);  // Free the memory of the old head order node
-            price_level.head->prev = nullptr;
-        } else {
-            memory_pool_.Deallocate(price_level.head); // Free the memory of the old head order node
-            price_level.head = nullptr;
-            price_level.tail = nullptr;
-            return true; // Price level is now empty
-        }
-    }
+    
     return false; // Price level still has orders
 }
 

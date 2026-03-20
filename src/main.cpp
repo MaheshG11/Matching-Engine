@@ -28,7 +28,7 @@ vector<Order> WorkloadGenerator(uint64_t num_workload_orders) {
             // NEW ORDER
             o.order_id = next_id++;
             o.side = (r & 1) ? 'B' : 'S';
-            o.price = 1000 + (r % 200);
+            o.price = 10000 + (r % 2000);
             o.quantity = 1 + (r % 1000);
             o.event_type = 'N';
 
@@ -77,6 +77,7 @@ int main() {
 
     }
     sort(times_in_ns.begin(), times_in_ns.end());
+    cout << "Best-case latency: " << times_in_ns.front() << " ns\n";
     cout << "P50 latency: " << times_in_ns[times_in_ns.size() * 50 / 100] << " ns\n";
     cout << "P90 latency: " << times_in_ns[times_in_ns.size() * 90 / 100] << " ns\n";
     cout << "P99 latency: " << times_in_ns[times_in_ns.size() * 99 / 100] << " ns\n";

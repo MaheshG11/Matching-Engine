@@ -18,6 +18,8 @@ EventHandler::EventHandler() : m_buffer(nullptr) {
         0
     ));
     assert(m_buffer != MAP_FAILED);
+
+    for(auto &event:event_buffer_){}
 }
 
 EventHandler::~EventHandler() {
@@ -32,16 +34,19 @@ EventHandler::~EventHandler() {
 }
 
 void EventHandler::HandleEvent(Event &event){
-    auto write_index = write_head_.load(std::memory_order_relaxed);
     auto read_index = read_head_.load(std::memory_order_acquire);
 
-    while(write_index - read_index >= MAX_BUFFER_SIZE){
+    while(write_index_ - read_index >= MAX_BUFFER_SIZE){
         _mm_pause(); // Buffer is full, wait for the event loop to consume events
         read_index = read_head_.load(std::memory_order_acquire);
     }
 
-    event_buffer_[write_index & (MAX_BUFFER_SIZE - 1)] = event;
-    write_head_.store(write_index + 1, std::memory_order_release);
+    event_buffer_[write_index_ & (MAX_BUFFER_SIZE - 1)] = event;
+    write_index_++;
+    if(write_index_ & DISTANCE){
+        __builtin_prefetch(&event_buffer_[(write_index_ + PREFETCH_DISTANCE) & (MAX_BUFFER_SIZE - 1)]); // Prefetch the next cache line to be written
+        write_head_.store(write_index_, std::memory_order_release);
+    }
 }
 
 void EventHandler::RunEventLoop(){
@@ -50,20 +55,25 @@ void EventHandler::RunEventLoop(){
     is_event_loop_running_.store(true, std::memory_order_release);
     std::thread event_loop_thread([this](){
         while(true){
-            auto read_index = read_head_.load(std::memory_order_relaxed);
-
-            if(read_index == write_head_.load(std::memory_order_acquire)){
-                // Empty Buffer
+            auto write_index = write_head_.load(std::memory_order_acquire);
+            if(write_index - read_index_   < DISTANCE){
+                // Empty Buffer or Not Enough Events to Process
                 if(!is_event_loop_running_.load(std::memory_order_acquire)){
                     break;
                 }
                 _mm_pause();
+                write_index = write_head_.load(std::memory_order_acquire);
                 continue;
             }
+            __builtin_prefetch(&event_buffer_[(read_index_  + PREFETCH_DISTANCE)& (MAX_BUFFER_SIZE - 1)]); // Prefetch the next cache line to be written
+            while(write_index > read_index_ ){
+                // Process events in batches of DISTANCE
+                Event& event = event_buffer_[read_index_ & (MAX_BUFFER_SIZE - 1)];
+                read_index_++;
+                WriteEventsToFile(event);
+            }
             // process event
-            Event& event = event_buffer_[read_index & (MAX_BUFFER_SIZE - 1)];            
-            read_head_.store(read_index + 1, std::memory_order_release);
-            WriteEventsToFile(event);
+            read_head_.store(read_index_, std::memory_order_release);
         }
     });
     swap(event_loop_thread_, event_loop_thread);
