@@ -29,7 +29,7 @@ class OrderBook{
         void updateBestAsk();
         bool updatePriceLevel(PriceLevel &price_level);
         void sendAddEvent(Order &order, int initial_quantity);
-        void sendExecEvent(Order &order, int exec_quantity, int exec_price, char status);
+        void sendExecEvent(int order_id, int exec_quantity, int exec_price, char side, char status);
         void sendCancelEvent(Order &order);
 
     private:

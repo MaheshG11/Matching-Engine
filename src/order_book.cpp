@@ -48,7 +48,8 @@ void OrderBook::addBuyOrder(Order &order){
         int exec_quantity=min(order.quantity,sell_order_node->quantity);
         order.quantity-=exec_quantity;
         sell_order_node->quantity-=exec_quantity;
-        sendExecEvent(order, exec_quantity, best_ask_price_, order.quantity == ZERO ? 'C' : 'P');
+        
+        sendExecEvent(sell_order_node->order_id, exec_quantity, best_ask_price_, 'S', sell_order_node->quantity == ZERO ? 'C' : 'P');
         if(sell_order_node->quantity == ZERO && updatePriceLevel(sell_price_levels_[best_ask_price_])){
             updateBestAsk();
         }
@@ -77,7 +78,8 @@ void OrderBook::addSellOrder(Order &order){
         int exec_quantity=min(order.quantity,buy_order_node->quantity);
         order.quantity-=exec_quantity;
         buy_order_node->quantity-=exec_quantity;
-        sendExecEvent(order, exec_quantity, best_bid_price_, order.quantity == ZERO ? 'C' : 'P');
+        
+        sendExecEvent(buy_order_node->order_id, exec_quantity, best_bid_price_, 'B', buy_order_node->quantity == ZERO ? 'C' : 'P');
         if(buy_order_node->quantity == ZERO && updatePriceLevel(buy_price_levels_[best_bid_price_])){
             updateBestBid();
         }
@@ -174,12 +176,12 @@ void OrderBook::sendAddEvent(Order &order, int initial_quantity){
     }
 }
 
-void OrderBook::sendExecEvent(Order &order, int exec_quantity, int exec_price, char status){
+void OrderBook::sendExecEvent(int order_id, int exec_quantity, int exec_price,char side, char status){
     Event event{
-        .order_id = order.order_id,
+        .order_id = order_id,
         .quantity = exec_quantity,
         .price = exec_price,
-        .side = order.side,
+        .side = side,
         .event_type = 'E',
         .status = status
     };

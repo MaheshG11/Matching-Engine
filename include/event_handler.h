@@ -14,7 +14,7 @@
 
 inline constexpr int MAX_BUFFER_SIZE = (1<<16); // Assuming a maximum of 1 million events in the queue
 inline constexpr size_t FILE_SIZE = 1 << 29;
-inline constexpr int DISTANCE = 4;
+inline constexpr int DISTANCE = 8;
 inline constexpr int PREFETCH_DISTANCE = 8;
 /**
   * Handles Events Emitted by the OrderBook class
